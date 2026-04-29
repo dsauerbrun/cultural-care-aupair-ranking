@@ -1,7 +1,8 @@
 import { fetchProfile } from "./fetch-profile.ts";
+import { fetchAupairs, saveAndCompare } from "./fetch-aupairs.ts";
 import { analyzePhotos, type PhotoAnalysisResult } from "./analyze-photos.ts";
 import { scoreProfile, type ProfileScores } from "./score-profile.ts";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -10,13 +11,16 @@ const PHOTO_CACHE_DIR = join(__dirname, "photo-analysis");
 const RESULTS_DIR = join(__dirname, "results");
 const NARRATIVES_DIR = join(__dirname, "narratives");
 
-const rawList = JSON.parse(readFileSync(join(__dirname, "aupairs.json"), "utf-8"));
-const allCandidates = (Array.isArray(rawList) ? rawList : (rawList.items ?? Object.values(rawList).find(Array.isArray))) as Array<{
+console.log("Fetching current au pair list...");
+const allCandidates = await fetchAupairs() as Array<{
   id: string;
   auPairNumber: string;
   auPairName?: string;
   firstName?: string;
 }>;
+
+saveAndCompare(allCandidates);
+
 const SHORTLIST = allCandidates.map((c) => ({
   id: c.id,
   name: c.auPairName ?? c.firstName ?? c.auPairNumber,

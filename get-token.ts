@@ -1,8 +1,16 @@
-// Fetches a fresh Cognito JWT for the Cultural Care host family portal.
-// Requires CULTURAL_CARE_EMAIL and CULTURAL_CARE_PASSWORD in .env.
+import {
+  CognitoUser,
+  CognitoUserPool,
+  AuthenticationDetails,
+} from "amazon-cognito-identity-js";
 
-const COGNITO_ENDPOINT = "https://cognito-idp.us-east-1.amazonaws.com/";
+const USER_POOL_ID = "us-east-1_sx86Ih47F";
 const CLIENT_ID = "3jsqobi851prmu958rn4b0t26e";
+
+const userPool = new CognitoUserPool({
+  UserPoolId: USER_POOL_ID,
+  ClientId: CLIENT_ID,
+});
 
 function tokenExpiresAt(token: string): number {
   try {
@@ -14,38 +22,23 @@ function tokenExpiresAt(token: string): number {
 }
 
 function isExpired(token: string): boolean {
-  // Treat token as expired 60 seconds before actual expiry to avoid edge cases
   return Date.now() / 1000 >= tokenExpiresAt(token) - 60;
 }
 
-async function fetchFreshToken(email: string, password: string): Promise<string> {
-  const res = await fetch(COGNITO_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-amz-json-1.1",
-      "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
-    },
-    body: JSON.stringify({
-      AuthFlow: "USER_PASSWORD_AUTH",
-      ClientId: CLIENT_ID,
-      AuthParameters: {
-        USERNAME: email,
-        PASSWORD: password,
+function fetchFreshToken(email: string, password: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const user = new CognitoUser({ Username: email, Pool: userPool });
+    const auth = new AuthenticationDetails({ Username: email, Password: password });
+
+    user.authenticateUser(auth, {
+      onSuccess(session) {
+        resolve(session.getIdToken().getJwtToken());
       },
-    }),
+      onFailure(err) {
+        reject(new Error(`Cognito auth failed: ${err.message ?? err}`));
+      },
+    });
   });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Cognito auth failed (${res.status}): ${body}`);
-  }
-
-  const json = await res.json() as {
-    AuthenticationResult?: { IdToken?: string };
-  };
-  const token = json.AuthenticationResult?.IdToken;
-  if (!token) throw new Error("Cognito response missing IdToken");
-  return token;
 }
 
 /**

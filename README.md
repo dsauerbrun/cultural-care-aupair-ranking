@@ -29,7 +29,8 @@ bun rank-candidates.ts
 ```
 
 This will:
-- Fetch all candidate profiles from `aupairs.json` (cached in `profiles/`)
+- Fetch the live candidate list from the Cultural Care search API (saves to `aupairs.json`)
+- Fetch all candidate profiles (cached in `profiles/`)
 - Analyze photos with Claude Haiku vision (cached in `photo-analysis/`)
 - Score each candidate on infant care, outdoor fit, English level, and acrylic nails
 - Save ranked results to `results-<timestamp>.json`
@@ -92,4 +93,4 @@ bun score-profile.ts <au-pair-id>
 
 ## Updating the candidate pool
 
-Re-run the search on the Cultural Care portal with your filters, save the response as `aupairs.json`, and run `bun rank-candidates.ts` again. Previously fetched profiles and photo analyses are cached so only new candidates will incur API costs.
+Just run `bun rank-candidates.ts` — it always fetches the live candidate list from Cultural Care first, so it automatically picks up newly available candidates and drops ones who are no longer available. You can also run `bun fetch-aupairs.ts` on its own to refresh `aupairs.json` without doing a full ranking run.

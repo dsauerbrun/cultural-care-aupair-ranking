@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 
-function findUniqueItems(list1: object[], list2: object[], uniqueKey = "id") {
+export function findUniqueItems(list1: object[], list2: object[], uniqueKey = "id") {
   const ids1 = new Set(list1.map(item => item[uniqueKey]));
   const ids2 = new Set(list2.map(item => item[uniqueKey]));
 
