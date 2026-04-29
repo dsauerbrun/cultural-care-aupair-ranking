@@ -69,17 +69,35 @@ function parseResponse(data: unknown): object[] {
   return list as object[];
 }
 
-export async function checkProfileViewable(auPairNumber: string): Promise<boolean> {
+const AVAILABILITY_URL =
+  "https://4bzk4o198j.execute-api.us-east-1.amazonaws.com/prod/matching/search/au-pairs/available";
+
+export type AvailabilityResult = {
+  available: boolean;
+  isVisible: boolean;
+  reason?: string;
+};
+
+export async function checkProfilesAvailable(
+  ids: string[]
+): Promise<Record<string, AvailabilityResult>> {
   const token = await getToken();
-  const res = await fetch(SEARCH_URL, {
+  const res = await fetch(AVAILABILITY_URL, {
     method: "POST",
     headers: { Authorization: token, "Content-Type": "application/json" },
-    body: JSON.stringify({ auPairNumber }),
+    body: JSON.stringify({ auPairLoginIds: ids }),
   });
-  if (!res.ok) return false;
-  const data = await res.json() as { count?: number; total?: number; items?: unknown[] };
-  const count = data.count ?? data.total ?? data.items?.length ?? 0;
-  return count > 0;
+  if (!res.ok) throw new Error(`Availability check failed: ${res.status}`);
+  const data = await res.json() as {
+    auPairs: Array<{ auPairLoginId: string; available: boolean; isVisible: boolean; reason?: string }>;
+  };
+  return Object.fromEntries(
+    data.auPairs.map(ap => [ap.auPairLoginId, {
+      available: ap.available,
+      isVisible: ap.isVisible,
+      reason: ap.reason,
+    }])
+  );
 }
 
 export function saveAndCompare(aupairs: object[]): void {

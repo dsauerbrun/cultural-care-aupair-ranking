@@ -1,5 +1,5 @@
 import { fetchProfile } from "./fetch-profile.ts";
-import { fetchAupairs, saveAndCompare, checkProfileViewable } from "./fetch-aupairs.ts";
+import { fetchAupairs, saveAndCompare, checkProfilesAvailable } from "./fetch-aupairs.ts";
 import { addToFavorites } from "./add-to-favorites.ts";
 import { analyzePhotos, type PhotoAnalysisResult } from "./analyze-photos.ts";
 import { scoreProfile, type ProfileScores } from "./score-profile.ts";
@@ -65,6 +65,7 @@ type RankedResult = {
   composite: number;
   scores: ProfileScores;
   profileViewable?: boolean;
+  availabilityReason?: string;
 };
 
 function compositeScore(s: ProfileScores): number {
@@ -81,11 +82,11 @@ function buildNarrativesPrompt(results: RankedResult[]): string {
     const s = r.scores;
     const ic = s.infantCare;
     const od = s.outdoor;
-    const viewability = r.profileViewable === true ? "✓ Profile viewable in app"
-      : r.profileViewable === false ? "✗ Profile unavailable in app"
+    const viewability = r.profileViewable === true ? "✓ Available"
+      : r.profileViewable === false ? `✗ Unavailable — ${r.availabilityReason ?? "unknown reason"}`
       : "Not checked";
     return `RANK #${r.rank}: ${r.name} (${r.auPairNumber}) — composite ${r.composite.toFixed(1)}/10
-Profile viewable in app: ${viewability}
+Availability: ${viewability}
 Infant care (${ic.score}/10): hours=${ic.breakdown.hoursWithInfants}, prefersInfants=${ic.breakdown.prefersInfantAges}, bioMentions=${ic.breakdown.bioMentionsInfants}, photoScore=${ic.breakdown.photoScore}/10. Notes: ${ic.notes.slice(0, 2).join("; ")}
 Outdoor (${od.score}/10, text:${od.textScore}, photos:${od.photoScore}): ${[...od.textEvidence.slice(0, 1), ...od.photoEvidence.slice(0, 1)].join("; ") || "no signals"}
 English: Level ${s.englishLevel.level} (${s.englishLevel.raw})
@@ -160,19 +161,28 @@ for (const candidate of SHORTLIST) {
 results.sort((a, b) => b.composite - a.composite);
 results.forEach((r, i) => { r.rank = i + 1; });
 
-// Check top 10 — add unavailable ones to favorites so they can be viewed
-console.log("\nChecking profile viewability for top 10...");
-for (const r of results.slice(0, 10)) {
-  r.profileViewable = await checkProfileViewable(r.auPairNumber);
-  if (r.profileViewable) {
-    console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✓ viewable`);
+// Batch-check availability for top 10
+const top10 = results.slice(0, 10);
+console.log("\nChecking availability for top 10...");
+const availability = await checkProfilesAvailable(top10.map(r => r.id));
+
+for (const r of top10) {
+  const av = availability[r.id];
+  r.profileViewable = av?.available ?? false;
+  r.availabilityReason = av?.reason;
+
+  if (av?.available) {
+    console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✓ available`);
   } else {
-    console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✗ unavailable — adding to favorites...`);
-    try {
-      await addToFavorites(r.id);
-      console.log(`    → favorited`);
-    } catch (e) {
-      console.warn(`    → failed to favorite: ${e instanceof Error ? e.message : e}`);
+    const reason = av?.reason ?? "unknown reason";
+    console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✗ ${reason}`);
+    if (reason !== "This au pair has already found their match.") {
+      try {
+        await addToFavorites(r.id);
+        console.log(`    → added to favorites`);
+      } catch (e) {
+        console.warn(`    → failed to favorite: ${e instanceof Error ? e.message : e}`);
+      }
     }
   }
 }

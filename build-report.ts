@@ -12,6 +12,7 @@ type RankedResult = {
   composite: number;
   scores: ProfileScores;
   profileViewable?: boolean;
+  availabilityReason?: string;
 };
 
 function buildMarkdown(results: RankedResult[], narratives: Record<string, string>, timestamp: string): string {
@@ -40,8 +41,9 @@ function buildMarkdown(results: RankedResult[], narratives: Record<string, strin
       ? `⚠️ Detected (${s.acrylicNails.confidence} confidence)`
       : "Not detected ✓";
 
-    const viewBadge = r.profileViewable === true ? "✅ Profile viewable in app"
-      : r.profileViewable === false ? "🚫 Profile unavailable in app"
+    const viewBadge = r.profileViewable === true ? "✅ Available"
+      : r.profileViewable === false && r.availabilityReason === "This au pair has already found their match." ? "💍 Found their match"
+      : r.profileViewable === false ? `⏳ ${r.availabilityReason ?? "Unavailable"}`
       : "";
 
     lines.push(`## ${medal} ${r.name} (${r.auPairNumber})`);
