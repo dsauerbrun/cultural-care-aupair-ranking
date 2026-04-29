@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun fetch-profile.ts b4d87498-3061-70e3-d8dc-74d8b40d7d3c)",
+      "Skill(claude-api)",
+      "Bash(bun *)"
+    ]
+  }
+}
