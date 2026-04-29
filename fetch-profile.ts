@@ -1,6 +1,7 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { getToken } from "./get-token.ts";
 
 const GRAPHQL_ENDPOINT =
   "https://jn6xymv2sfgljcnnjzffb7jaum.appsync-api.us-east-1.amazonaws.com/graphql";
@@ -12,12 +13,7 @@ const queryTemplate = JSON.parse(
 
 const PROFILES_DIR = join(__dirname, "profiles");
 
-export async function fetchProfile(id: string, token: string) {
-  const cachePath = join(PROFILES_DIR, `${id}.json`);
-  if (existsSync(cachePath)) {
-    return JSON.parse(readFileSync(cachePath, "utf-8"));
-  }
-
+async function doFetch(id: string, token: string) {
   const body = {
     ...queryTemplate,
     query: queryTemplate.query.replace(
@@ -35,8 +31,27 @@ export async function fetchProfile(id: string, token: string) {
     body: JSON.stringify(body),
   });
 
+  return res;
+}
+
+export async function fetchProfile(id: string) {
+  const cachePath = join(PROFILES_DIR, `${id}.json`);
+  if (existsSync(cachePath)) {
+    return JSON.parse(readFileSync(cachePath, "utf-8"));
+  }
+
+  // Get a valid token (auto-refreshes if expired)
+  let token = await getToken();
+  let res = await doFetch(id, token);
+
+  // On 401, force-refresh the token and retry once
   if (res.status === 401) {
-    throw new Error("401 Unauthorized — token has expired, please provide a fresh CULTURAL_CARE_TOKEN");
+    token = await getToken(true);
+    res = await doFetch(id, token);
+  }
+
+  if (res.status === 401) {
+    throw new Error("401 Unauthorized after token refresh — check CULTURAL_CARE_EMAIL and CULTURAL_CARE_PASSWORD in .env");
   }
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}: ${await res.text()}`);
@@ -66,12 +81,6 @@ if (import.meta.main) {
     process.exit(1);
   }
 
-  const token = process.env.CULTURAL_CARE_TOKEN;
-  if (!token) {
-    console.error("Set CULTURAL_CARE_TOKEN env var to a fresh Cognito JWT before running.");
-    process.exit(1);
-  }
-
-  const profile = await fetchProfile(id, token);
+  const profile = await fetchProfile(id);
   console.log(JSON.stringify(profile, null, 2));
 }

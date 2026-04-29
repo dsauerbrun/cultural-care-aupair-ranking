@@ -84,4 +84,4 @@ const markdown = buildMarkdown(candidates, narrativesRaw, generatedAt);
 const mdPath = resultsFile.replace(/\.json$/, ".md");
 writeFileSync(mdPath, markdown);
 
-console.log(`Saved report to results-${slug}.md`);
+console.log(`Saved report to ${mdPath}`);

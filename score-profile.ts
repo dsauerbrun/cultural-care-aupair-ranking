@@ -297,13 +297,7 @@ if (import.meta.main) {
     process.exit(1);
   }
 
-  const token = process.env.CULTURAL_CARE_TOKEN;
-  if (!token) {
-    console.error("Set CULTURAL_CARE_TOKEN env var before running.");
-    process.exit(1);
-  }
-
-  const profile = (await fetchProfile(id, token)) as Profile & {
+  const profile = (await fetchProfile(id)) as Profile & {
     firstName?: string;
     auPairNumber?: string;
     mediaFiles?: Array<{ file: { cfnUrl?: string } }>;

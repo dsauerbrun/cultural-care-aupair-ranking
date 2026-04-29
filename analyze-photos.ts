@@ -138,18 +138,30 @@ Return ONLY this JSON object, no additional text:
       break; // success
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      if ((msg.includes("invalid or unsupported") || msg.includes("exceeds the maximum allowed size") || msg.includes("Unable to connect to the remote server")) && toAnalyze.length > 1) {
+      const status = (e as {status?: number}).status;
+      if (status === 400) {
         // Extract the exact index Claude rejected; fall back to last image
         const indexMatch = msg.match(/content\.(\d+)\.image/);
         const badIndex = indexMatch ? parseInt(indexMatch[1]) : toAnalyze.length - 1;
         toAnalyze = toAnalyze.filter((_, i) => i !== badIndex);
+        if (toAnalyze.length === 0) break; // no valid images left — return empty result
         continue;
       }
       throw e;
     }
   }
 
-  const textBlock = response!.content.find((b) => b.type === "text");
+  if (!response) {
+    return {
+      outdoor: { score: 0, hasActivePhoto: false, evidence: ["No usable photos — all were rejected by the API"] },
+      infantCare: { score: 0, hasBabyPhoto: false, evidence: ["No usable photos"] },
+      acrylicNails: { detected: false, confidence: "low", note: "No usable photos" },
+      photoCount: urls.length,
+      analyzedCount: 0,
+    };
+  }
+
+  const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("Unexpected response format from Claude vision");
   }

@@ -72,12 +72,6 @@ ${candidateData}`;
 }
 
 // --- Main ---
-const token = process.env.CULTURAL_CARE_TOKEN;
-if (!token) {
-  console.error("Set CULTURAL_CARE_TOKEN env var before running.");
-  process.exit(1);
-}
-
 const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
 if (!hasAnthropicKey) {
   console.warn("No ANTHROPIC_API_KEY — photo analysis will be skipped for uncached candidates.\n");
@@ -90,7 +84,7 @@ const results: RankedResult[] = [];
 for (const candidate of SHORTLIST) {
   process.stdout.write(`  ${candidate.name} (${candidate.auPairNumber})... `);
 
-  const profile = await fetchProfile(candidate.id, token) as {
+  const profile = await fetchProfile(candidate.id) as {
     mediaFiles?: Array<{ file: { cfnUrl?: string } }>;
     profilePicture?: { cfnUrl?: string };
     interview?: { englishProficiencyLevel?: string };
