@@ -13,8 +13,11 @@ Create a `.env` file in this directory with:
 ```
 CULTURAL_CARE_EMAIL=your@email.com
 CULTURAL_CARE_PASSWORD=yourpassword
+CULTURAL_CARE_HF_ID=<your host family UUID>
 ANTHROPIC_API_KEY=<your Anthropic API key>
 ```
+
+**Getting `CULTURAL_CARE_HF_ID`:** Open DevTools on the Cultural Care portal, go to the Network tab, find a GraphQL request that includes `hfId` in the payload, and copy that UUID. It's stable and won't change.
 
 **Token handling:** The Cognito JWT is fetched and refreshed automatically using your email and password — no manual token copying needed. If you prefer to set a token manually instead, you can still set `CULTURAL_CARE_TOKEN` directly and it will be used until it expires.
 

@@ -1,5 +1,6 @@
 import { fetchProfile } from "./fetch-profile.ts";
 import { fetchAupairs, saveAndCompare, checkProfileViewable } from "./fetch-aupairs.ts";
+import { addToFavorites } from "./add-to-favorites.ts";
 import { analyzePhotos, type PhotoAnalysisResult } from "./analyze-photos.ts";
 import { scoreProfile, type ProfileScores } from "./score-profile.ts";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs";
@@ -159,16 +160,22 @@ for (const candidate of SHORTLIST) {
 results.sort((a, b) => b.composite - a.composite);
 results.forEach((r, i) => { r.rank = i + 1; });
 
-// Check profile viewability until we have 10 viewable candidates
-console.log("\nChecking profile viewability (until 10 viewable found)...");
-let viewableCount = 0;
-for (const r of results) {
-  if (viewableCount >= 10) break;
+// Check top 10 — add unavailable ones to favorites so they can be viewed
+console.log("\nChecking profile viewability for top 10...");
+for (const r of results.slice(0, 10)) {
   r.profileViewable = await checkProfileViewable(r.auPairNumber);
-  if (r.profileViewable) viewableCount++;
-  console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ${r.profileViewable ? "✓ viewable" : "✗ unavailable"}`);
+  if (r.profileViewable) {
+    console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✓ viewable`);
+  } else {
+    console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✗ unavailable — adding to favorites...`);
+    try {
+      await addToFavorites(r.id);
+      console.log(`    → favorited`);
+    } catch (e) {
+      console.warn(`    → failed to favorite: ${e instanceof Error ? e.message : e}`);
+    }
+  }
 }
-console.log(`Found ${viewableCount} viewable profile(s).`);
 
 // Save JSON results
 const timestamp = new Date().toISOString();

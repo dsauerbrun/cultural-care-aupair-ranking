@@ -55,16 +55,24 @@ export async function analyzePhotos(
     urls.push(profilePicture.cfnUrl);
   }
 
+  function cacheAndReturn(result: PhotoAnalysisResult): PhotoAnalysisResult {
+    if (cacheId) {
+      mkdirSync(CACHE_DIR, { recursive: true });
+      writeFileSync(join(CACHE_DIR, `${cacheId}.json`), JSON.stringify(result, null, 2));
+    }
+    return result;
+  }
+
   let toAnalyze = urls.slice(0, MAX_PHOTOS);
 
   if (toAnalyze.length === 0) {
-    return {
+    return cacheAndReturn({
       outdoor: { score: 0, hasActivePhoto: false, evidence: ["No photos available"] },
       infantCare: { score: 0, hasBabyPhoto: false, evidence: ["No photos available"] },
       acrylicNails: { detected: false, confidence: "low", note: "No photos available" },
       photoCount: 0,
       analyzedCount: 0,
-    };
+    });
   }
 
   // Retry loop: if Claude rejects an image as invalid format, drop the last
@@ -152,13 +160,13 @@ Return ONLY this JSON object, no additional text:
   }
 
   if (!response) {
-    return {
+    return cacheAndReturn({
       outdoor: { score: 0, hasActivePhoto: false, evidence: ["No usable photos — all were rejected by the API"] },
       infantCare: { score: 0, hasBabyPhoto: false, evidence: ["No usable photos"] },
       acrylicNails: { detected: false, confidence: "low", note: "No usable photos" },
       photoCount: urls.length,
       analyzedCount: 0,
-    };
+    });
   }
 
   const textBlock = response.content.find((b) => b.type === "text");
@@ -179,12 +187,7 @@ Return ONLY this JSON object, no additional text:
     analyzedCount: toAnalyze.length,
   };
 
-  if (cacheId) {
-    mkdirSync(CACHE_DIR, { recursive: true });
-    writeFileSync(join(CACHE_DIR, `${cacheId}.json`), JSON.stringify(result, null, 2));
-  }
-
-  return result;
+  return cacheAndReturn(result);
 }
 
 // CLI: bun analyze-photos.ts <au-pair-id>
