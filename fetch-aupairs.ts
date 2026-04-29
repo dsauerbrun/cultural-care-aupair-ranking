@@ -69,6 +69,19 @@ function parseResponse(data: unknown): object[] {
   return list as object[];
 }
 
+export async function checkProfileViewable(auPairNumber: string): Promise<boolean> {
+  const token = await getToken();
+  const res = await fetch(SEARCH_URL, {
+    method: "POST",
+    headers: { Authorization: token, "Content-Type": "application/json" },
+    body: JSON.stringify({ auPairNumber }),
+  });
+  if (!res.ok) return false;
+  const data = await res.json() as { count?: number; total?: number; items?: unknown[] };
+  const count = data.count ?? data.total ?? data.items?.length ?? 0;
+  return count > 0;
+}
+
 export function saveAndCompare(aupairs: object[]): void {
   const payload = JSON.stringify({ total: aupairs.length, items: aupairs }, null, 2);
 

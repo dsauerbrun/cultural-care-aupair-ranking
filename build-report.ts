@@ -11,6 +11,7 @@ type RankedResult = {
   auPairNumber: string;
   composite: number;
   scores: ProfileScores;
+  profileViewable?: boolean;
 };
 
 function buildMarkdown(results: RankedResult[], narratives: Record<string, string>, timestamp: string): string {
@@ -39,8 +40,12 @@ function buildMarkdown(results: RankedResult[], narratives: Record<string, strin
       ? `⚠️ Detected (${s.acrylicNails.confidence} confidence)`
       : "Not detected ✓";
 
+    const viewBadge = r.profileViewable === true ? "✅ Profile viewable in app"
+      : r.profileViewable === false ? "🚫 Profile unavailable in app"
+      : "";
+
     lines.push(`## ${medal} ${r.name} (${r.auPairNumber})`);
-    lines.push(`**Overall: ${r.composite.toFixed(1)}/10**`);
+    lines.push(`**Overall: ${r.composite.toFixed(1)}/10**${viewBadge ? `  ·  ${viewBadge}` : ""}`);
     lines.push("");
     lines.push(narratives[r.auPairNumber] ?? "_No narrative generated._");
     lines.push("");

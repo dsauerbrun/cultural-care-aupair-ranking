@@ -1,5 +1,5 @@
 import { fetchProfile } from "./fetch-profile.ts";
-import { fetchAupairs, saveAndCompare } from "./fetch-aupairs.ts";
+import { fetchAupairs, saveAndCompare, checkProfileViewable } from "./fetch-aupairs.ts";
 import { analyzePhotos, type PhotoAnalysisResult } from "./analyze-photos.ts";
 import { scoreProfile, type ProfileScores } from "./score-profile.ts";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs";
@@ -63,6 +63,7 @@ type RankedResult = {
   auPairNumber: string;
   composite: number;
   scores: ProfileScores;
+  profileViewable?: boolean;
 };
 
 function compositeScore(s: ProfileScores): number {
@@ -79,7 +80,11 @@ function buildNarrativesPrompt(results: RankedResult[]): string {
     const s = r.scores;
     const ic = s.infantCare;
     const od = s.outdoor;
+    const viewability = r.profileViewable === true ? "✓ Profile viewable in app"
+      : r.profileViewable === false ? "✗ Profile unavailable in app"
+      : "Not checked";
     return `RANK #${r.rank}: ${r.name} (${r.auPairNumber}) — composite ${r.composite.toFixed(1)}/10
+Profile viewable in app: ${viewability}
 Infant care (${ic.score}/10): hours=${ic.breakdown.hoursWithInfants}, prefersInfants=${ic.breakdown.prefersInfantAges}, bioMentions=${ic.breakdown.bioMentionsInfants}, photoScore=${ic.breakdown.photoScore}/10. Notes: ${ic.notes.slice(0, 2).join("; ")}
 Outdoor (${od.score}/10, text:${od.textScore}, photos:${od.photoScore}): ${[...od.textEvidence.slice(0, 1), ...od.photoEvidence.slice(0, 1)].join("; ") || "no signals"}
 English: Level ${s.englishLevel.level} (${s.englishLevel.raw})
@@ -153,6 +158,17 @@ for (const candidate of SHORTLIST) {
 
 results.sort((a, b) => b.composite - a.composite);
 results.forEach((r, i) => { r.rank = i + 1; });
+
+// Check profile viewability until we have 10 viewable candidates
+console.log("\nChecking profile viewability (until 10 viewable found)...");
+let viewableCount = 0;
+for (const r of results) {
+  if (viewableCount >= 10) break;
+  r.profileViewable = await checkProfileViewable(r.auPairNumber);
+  if (r.profileViewable) viewableCount++;
+  console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ${r.profileViewable ? "✓ viewable" : "✗ unavailable"}`);
+}
+console.log(`Found ${viewableCount} viewable profile(s).`);
 
 // Save JSON results
 const timestamp = new Date().toISOString();
