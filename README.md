@@ -11,11 +11,12 @@ bun install
 Create a `.env` file in this directory with:
 
 ```
-CULTURAL_CARE_TOKEN=<Cognito JWT from browser DevTools>
+CULTURAL_CARE_EMAIL=your@email.com
+CULTURAL_CARE_PASSWORD=yourpassword
 ANTHROPIC_API_KEY=<your Anthropic API key>
 ```
 
-**Getting `CULTURAL_CARE_TOKEN`:** Log into the Cultural Care host family portal, open DevTools → Network tab, click any GraphQL request, and copy the `Authorization` header value. This token expires every ~1 hour — if you get a 401 error mid-run, grab a fresh one and update `.env`.
+**Token handling:** The Cognito JWT is fetched and refreshed automatically using your email and password — no manual token copying needed. If you prefer to set a token manually instead, you can still set `CULTURAL_CARE_TOKEN` directly and it will be used until it expires.
 
 **Getting `ANTHROPIC_API_KEY`:** Used only for photo analysis (not narrative generation). Create an account at console.anthropic.com and add API credits (~$5 covers the full candidate list many times over).
 
