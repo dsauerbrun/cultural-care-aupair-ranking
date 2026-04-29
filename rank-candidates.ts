@@ -2,7 +2,7 @@ import { fetchProfile } from "./fetch-profile.ts";
 import { fetchAupairs, saveAndCompare } from "./fetch-aupairs.ts";
 import { analyzePhotos, type PhotoAnalysisResult } from "./analyze-photos.ts";
 import { scoreProfile, type ProfileScores } from "./score-profile.ts";
-import { existsSync, mkdirSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -21,11 +21,40 @@ const allCandidates = await fetchAupairs() as Array<{
 
 saveAndCompare(allCandidates);
 
-const SHORTLIST = allCandidates.map((c) => ({
-  id: c.id,
-  name: c.auPairName ?? c.firstName ?? c.auPairNumber,
-  auPairNumber: c.auPairNumber,
-}));
+const liveIds = new Set(allCandidates.map(c => c.id));
+
+// Merge in any cached profiles that didn't appear in this search response
+const PROFILES_DIR = join(__dirname, "profiles");
+const cachedOnly = readdirSync(PROFILES_DIR)
+  .filter(f => f.endsWith(".json"))
+  .map(f => f.replace(".json", ""))
+  .filter(id => !liveIds.has(id))
+  .map(id => {
+    const p = JSON.parse(readFileSync(join(PROFILES_DIR, `${id}.json`), "utf-8")) as {
+      id?: string;
+      auPairNumber?: string;
+      firstName?: string;
+      nickName?: string;
+    };
+    return {
+      id,
+      auPairNumber: p.auPairNumber ?? id,
+      name: p.nickName ?? p.firstName ?? p.auPairNumber ?? id,
+    };
+  });
+
+if (cachedOnly.length > 0) {
+  console.log(`Including ${cachedOnly.length} cached candidate(s) not in current search results.`);
+}
+
+const SHORTLIST = [
+  ...allCandidates.map(c => ({
+    id: c.id,
+    name: c.auPairName ?? c.firstName ?? c.auPairNumber,
+    auPairNumber: c.auPairNumber,
+  })),
+  ...cachedOnly,
+];
 
 type RankedResult = {
   rank: number;
