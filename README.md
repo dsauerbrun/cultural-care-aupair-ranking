@@ -120,46 +120,6 @@ To get one: go to console.anthropic.com → sign up or log in → API Keys → C
 
 ---
 
-## Usage
-
-### Step 1 — Run the ranker
-
-```bash
-bun rank-candidates.ts
-```
-
-This will:
-- Fetch the live candidate list and compare it to the previous fetch
-- Fetch and cache any new candidate profiles
-- Analyze and cache photos for any new candidates
-- Score and rank all candidates (including previously cached ones not in the current search results)
-- Check availability for the top candidates, auto-favorite unavailable ones, and zero out matched ones
-- Save ranked results to `results/results-<timestamp>.json`
-- Save a narrative prompt to `narratives/narratives-prompt-<timestamp>.txt`
-
-You can stop here. The raw ranked scores are in `results/results-<timestamp>.json`, and the narrative prompt at `narratives/narratives-prompt-<timestamp>.txt` is human-readable on its own if you want a quick look without generating the full report.
-
-### Step 2 — Generate narratives _(optional — requires Claude.ai or similar)_
-
-1. Open `narratives/narratives-prompt-<timestamp>.txt`
-2. Paste the entire contents into [claude.ai](https://claude.ai) (uses your Pro subscription — no API credits)
-3. Claude responds with a JSON object mapping each candidate's ID to a narrative explanation
-4. Save that response as `narratives/narratives-<timestamp>.json`
-
-### Step 3 — Build the markdown report _(optional — requires Step 2)_
-
-```bash
-bun build-report.ts results/results-<timestamp>.json narratives/narratives-<timestamp>.json
-```
-
-Generates `results/results-<timestamp>.md` — open it in any markdown viewer.
-
-```bash
-open results/results-<timestamp>.md
-```
-
----
-
 ## Setup your own criteria (`criteria.yaml`)
 
 All scoring is driven by `criteria.yaml`. Copy `criteria.example.yaml` to `criteria.yaml` and edit it to match what you care about. No code changes needed.
@@ -312,6 +272,46 @@ Each criterion is one entry in the `criteria` list with a `type` of `score`, `th
 - **`raw_max`** is the denominator for normalizing profile signals to 0-10. Set it to the maximum raw points any candidate could realistically earn across all signals.
 - **Clear the photo cache** (`photo-analysis/`) when you add or remove criteria that have a `photo` section — cached results won't include the new dimensions.
 - **Test a single candidate** before a full run: `bun score-profile.ts <au-pair-id>`
+
+---
+
+## Usage
+
+### Step 1 — Run the ranker
+
+```bash
+bun rank-candidates.ts
+```
+
+This will:
+- Fetch the live candidate list and compare it to the previous fetch
+- Fetch and cache any new candidate profiles
+- Analyze and cache photos for any new candidates
+- Score and rank all candidates (including previously cached ones not in the current search results)
+- Check availability for the top candidates, auto-favorite unavailable ones, and zero out matched ones
+- Save ranked results to `results/results-<timestamp>.json`
+- Save a narrative prompt to `narratives/narratives-prompt-<timestamp>.txt`
+
+You can stop here. The raw ranked scores are in `results/results-<timestamp>.json`, and the narrative prompt at `narratives/narratives-prompt-<timestamp>.txt` is human-readable on its own if you want a quick look without generating the full report.
+
+### Step 2 — Generate narratives _(optional — requires Claude.ai or similar)_
+
+1. Open `narratives/narratives-prompt-<timestamp>.txt`
+2. Paste the entire contents into [claude.ai](https://claude.ai) (uses your Pro subscription — no API credits)
+3. Claude responds with a JSON object mapping each candidate's ID to a narrative explanation
+4. Save that response as `narratives/narratives-<timestamp>.json`
+
+### Step 3 — Build the markdown report _(optional — requires Step 2)_
+
+```bash
+bun build-report.ts results/results-<timestamp>.json narratives/narratives-<timestamp>.json
+```
+
+Generates `results/results-<timestamp>.md` — open it in any markdown viewer.
+
+```bash
+open results/results-<timestamp>.md
+```
 
 ---
 
