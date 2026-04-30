@@ -2,6 +2,21 @@
 
 Fetches, scores, and ranks Cultural Care au pair candidates. Generates a human-readable report so you can quickly identify the best matches.
 
+## Table of contents
+
+- [How it works](#how-it-works)
+- [Setup](#setup)
+- [Workflow](#workflow)
+- [Defining your own criteria](#defining-your-own-criteria-criteriayaml)
+  - [Generating with an LLM (recommended)](#generating-a-criteriayaml-with-an-llm-recommended)
+  - [Criterion types](#criterion-types)
+  - [Signal types](#signal-types-for-profile_signals)
+  - [Tips](#tips)
+- [Files](#files)
+- [Individual scripts](#individual-scripts)
+
+---
+
 ## How it works
 
 ### 1. Candidate list — always fresh, always complete
@@ -35,6 +50,7 @@ The tool keeps checking candidates in order until it has found 10 who haven't ye
 Results are saved as a timestamped JSON file. A narrative prompt is also generated — paste it into Claude.ai (using your Pro subscription, no API credits needed) to get human-readable explanations for each candidate's ranking. Run `build-report.ts` to combine the scores and narratives into a final markdown report.
 
 ### Example output
+===================================================================================================
 
 # Au Pair Rankings — Fake Town, CO
 _Generated: 4/29/2026, 9:52:21 PM_
@@ -78,6 +94,8 @@ Standout outdoor profile (8/10 across both text and photos) with a scuba diving 
 ---
 
 ---
+
+===================================================================================================
 
 ## Setup
 
