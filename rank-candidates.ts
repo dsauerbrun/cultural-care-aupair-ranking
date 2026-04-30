@@ -76,7 +76,7 @@ function buildNarrativesPrompt(results: RankedResult[]): string {
     })
     .join("\n");
 
-  const candidateData = results.map(r => {
+  const candidateData = results.slice(0, 50).map(r => {
     const lines: string[] = [
       `RANK #${r.rank}: ${r.name} (${r.auPairNumber}) — composite ${r.composite.toFixed(1)}/10`,
     ];
