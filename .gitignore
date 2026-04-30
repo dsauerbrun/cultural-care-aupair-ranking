@@ -36,6 +36,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Au pair search — user-specific config and generated output
 criteria.yaml
 search.yaml
+ignore-list.yaml
 
 # Cached API responses and generated output
 profiles/
