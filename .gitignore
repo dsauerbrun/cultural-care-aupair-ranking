@@ -33,7 +33,10 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-# Au pair search — cached API responses and generated output
+# Au pair search — user-specific config and generated output
+criteria.yaml
+
+# Cached API responses and generated output
 profiles/
 photo-analysis/
 results/
