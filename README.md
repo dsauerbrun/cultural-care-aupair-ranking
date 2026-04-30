@@ -8,8 +8,8 @@ If you found this tool useful and want to buy me a coffee! [![Buy Me A Coffee](h
 
 - [How it works](#how-it-works)
 - [Setup](#setup)
-- [Workflow](#workflow)
-- [Defining your own criteria](#defining-your-own-criteria-criteriayaml)
+- [Setup your own criteria](#setup-your-own-criteria-criteriayaml)
+- [Usage](#usage)
   - [Generating with an LLM (recommended)](#generating-a-criteriayaml-with-an-llm-recommended)
   - [Criterion types](#criterion-types)
   - [Signal types](#signal-types-for-profile_signals)
@@ -120,7 +120,7 @@ To get one: go to console.anthropic.com → sign up or log in → API Keys → C
 
 ---
 
-## Workflow
+## Usage
 
 ### Step 1 — Run the ranker
 
@@ -160,7 +160,7 @@ open results/results-<timestamp>.md
 
 ---
 
-## Defining your own criteria (`criteria.yaml`)
+## Setup your own criteria (`criteria.yaml`)
 
 All scoring is driven by `criteria.yaml`. Copy `criteria.example.yaml` to `criteria.yaml` and edit it to match what you care about. No code changes needed.
 
