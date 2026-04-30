@@ -8,6 +8,7 @@ import { loadCriteria } from "./criteria-engine.ts";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import yaml from "js-yaml";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PHOTO_CACHE_DIR = join(__dirname, "photo-analysis");
@@ -151,10 +152,26 @@ for (const candidate of SHORTLIST) {
   console.log(`composite: ${composite.toFixed(2)}`);
 }
 
+// ─── Filter out au pairs not interested in or already chatted with ────────────
+
+const ignoreListYaml = readFileSync(join(__dirname, "ignore-list.yaml"), "utf-8");
+
+const notInterestedAuPairNumbers = (yaml.load(ignoreListYaml) as { aupairNumbersToIgnore: string[] }).aupairNumbersToIgnore || [];
+console.log('\nFiltering out candidates previously indicated as not interested or already chatted with...');
+results.forEach(r => {
+  if (notInterestedAuPairNumbers.includes(r.auPairNumber)) {
+    r.composite = 0;
+    r.flags.push("Previously indicated not interested");
+    console.log(` ${r.name} (${r.auPairNumber}): ✗ Previously indicated not interested — score zeroed`);
+  }
+});
+
+
 // ─── Sort & Rank ──────────────────────────────────────────────────────────────
 
 results.sort((a, b) => b.composite - a.composite);
 results.forEach((r, i) => { r.rank = i + 1; });
+
 
 // ─── Availability Checking ────────────────────────────────────────────────────
 
