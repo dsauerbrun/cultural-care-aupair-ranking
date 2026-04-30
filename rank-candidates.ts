@@ -161,31 +161,52 @@ for (const candidate of SHORTLIST) {
 results.sort((a, b) => b.composite - a.composite);
 results.forEach((r, i) => { r.rank = i + 1; });
 
-// Batch-check availability for top 10
-const top10 = results.slice(0, 10);
-console.log("\nChecking availability for top 10...");
-const availability = await checkProfilesAvailable(top10.map(r => r.id));
+// Check availability in batches until we have 10 non-matched candidates.
+// Matched ones get their score zeroed so they sink to the bottom on re-sort.
+const FOUND_MATCH_REASON = "This au pair has already found their match.";
+const AVAILABILITY_BATCH = 10;
+let nonMatchedFound = 0;
+let checkedUpTo = 0;
 
-for (const r of top10) {
-  const av = availability[r.id];
-  r.profileViewable = av?.available ?? false;
-  r.availabilityReason = av?.reason;
+console.log("\nChecking availability (until 10 non-matched found)...");
 
-  if (av?.available) {
-    console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✓ available`);
-  } else {
-    const reason = av?.reason ?? "unknown reason";
-    console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✗ ${reason}`);
-    if (reason !== "This au pair has already found their match.") {
-      try {
-        await addToFavorites(r.id);
-        console.log(`    → added to favorites`);
-      } catch (e) {
-        console.warn(`    → failed to favorite: ${e instanceof Error ? e.message : e}`);
+while (nonMatchedFound < 10 && checkedUpTo < results.length) {
+  const batch = results.slice(checkedUpTo, checkedUpTo + AVAILABILITY_BATCH);
+  checkedUpTo += batch.length;
+
+  const availability = await checkProfilesAvailable(batch.map(r => r.id));
+
+  for (const r of batch) {
+    const av = availability[r.id];
+    r.profileViewable = av?.available ?? false;
+    r.availabilityReason = av?.reason;
+
+    if (av?.reason === FOUND_MATCH_REASON) {
+      r.composite = 0;
+      console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): 💍 Found their match — score zeroed`);
+    } else {
+      nonMatchedFound++;
+      if (av?.available) {
+        console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✓ available`);
+      } else {
+        const reason = av?.reason ?? "unavailable";
+        console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✗ ${reason} — adding to favorites`);
+        try {
+          await addToFavorites(r.id);
+          console.log(`    → added to favorites`);
+        } catch (e) {
+          console.warn(`    → failed to favorite: ${e instanceof Error ? e.message : e}`);
+        }
       }
     }
   }
 }
+
+console.log(`\nFound ${nonMatchedFound} non-matched candidate(s) after checking ${checkedUpTo}.`);
+
+// Re-sort: matched ones (score=0) sink to the bottom
+results.sort((a, b) => b.composite - a.composite);
+results.forEach((r, i) => { r.rank = i + 1; })
 
 // Save JSON results
 const timestamp = new Date().toISOString();

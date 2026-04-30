@@ -39,5 +39,6 @@ photo-analysis/
 results/
 narratives/
 aupairs.json
+matched-aupairs.json
 
 au-pair-filter-responses/

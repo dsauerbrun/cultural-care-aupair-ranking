@@ -78,26 +78,67 @@ export type AvailabilityResult = {
   reason?: string;
 };
 
+const MATCHED_CACHE_FILE = join(__dirname, "matched-aupairs.json");
+const FOUND_MATCH_REASON = "This au pair has already found their match.";
+
+function loadMatchedCache(): Set<string> {
+  try {
+    const data = JSON.parse(readFileSync(MATCHED_CACHE_FILE, "utf-8")) as string[];
+    return new Set(data);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveMatchedCache(matched: Set<string>): void {
+  writeFileSync(MATCHED_CACHE_FILE, JSON.stringify([...matched], null, 2));
+}
+
 export async function checkProfilesAvailable(
   ids: string[]
 ): Promise<Record<string, AvailabilityResult>> {
+  const matchedCache = loadMatchedCache();
+
+  // Pre-fill results for already-cached matched candidates
+  const results: Record<string, AvailabilityResult> = {};
+  const toCheck: string[] = [];
+
+  for (const id of ids) {
+    if (matchedCache.has(id)) {
+      results[id] = { available: false, isVisible: false, reason: FOUND_MATCH_REASON };
+    } else {
+      toCheck.push(id);
+    }
+  }
+
+  if (toCheck.length === 0) return results;
+
   const token = await getToken();
   const res = await fetch(AVAILABILITY_URL, {
     method: "POST",
     headers: { Authorization: token, "Content-Type": "application/json" },
-    body: JSON.stringify({ auPairLoginIds: ids }),
+    body: JSON.stringify({ auPairLoginIds: toCheck }),
   });
   if (!res.ok) throw new Error(`Availability check failed: ${res.status}`);
   const data = await res.json() as {
     auPairs: Array<{ auPairLoginId: string; available: boolean; isVisible: boolean; reason?: string }>;
   };
-  return Object.fromEntries(
-    data.auPairs.map(ap => [ap.auPairLoginId, {
+
+  let cacheUpdated = false;
+  for (const ap of data.auPairs) {
+    results[ap.auPairLoginId] = {
       available: ap.available,
       isVisible: ap.isVisible,
       reason: ap.reason,
-    }])
-  );
+    };
+    if (ap.reason === FOUND_MATCH_REASON) {
+      matchedCache.add(ap.auPairLoginId);
+      cacheUpdated = true;
+    }
+  }
+
+  if (cacheUpdated) saveMatchedCache(matchedCache);
+  return results;
 }
 
 export function saveAndCompare(aupairs: object[]): void {
