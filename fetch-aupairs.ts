@@ -1,34 +1,28 @@
-import { writeFileSync, mkdirSync, readdirSync, readFileSync } from "fs";
+import { writeFileSync, mkdirSync, readdirSync, readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { getToken } from "./get-token.ts";
 import { findUniqueItems } from "./listcompare.ts";
+import yaml from "js-yaml";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AUPAIRS_FILE = join(__dirname, "aupairs.json");
 const RESPONSES_DIR = join(__dirname, "au-pair-filter-responses");
+const SEARCH_CONFIG_FILE = join(__dirname, "search.yaml");
 
 const SEARCH_URL =
   "https://4bzk4o198j.execute-api.us-east-1.amazonaws.com/prod/v2/matching/search/au-pairs?pageSize=1000";
 
-const SEARCH_BODY = {
-  earliestTravelDate: "2026-08-07",
-  latestTravelDate: "2026-09-25",
-  ages: ["21 - 23", "24+"],
-  homeCountry: [
-    "AR","AU","AT","BE","BR","CA","CL","CO","HR","CZ","DK","EE","EC","FI",
-    "FR","DE","GR","HU","IE","IT","LV","LT","MX","NL","NZ","NO","PA","PT",
-    "SK","SI","SE","CH","TH","UY",
-  ],
-  genderIdentity: ["Female"],
-  religion: [
-    "Agnostic","Atheist","Buddhist","Catholic","Christian","Hindu","Jewish",
-    "Spiritual","Other","Not religious",
-  ],
-  okToSuperviseSwimmingChildren: false,
-  livedAwayFromHome: false,
-  okToLiveSingleParent: false,
-};
+function loadSearchBody(): Record<string, unknown> {
+  if (!existsSync(SEARCH_CONFIG_FILE)) {
+    throw new Error(
+      "search.yaml not found. Copy search.example.yaml to search.yaml and fill in your search filters."
+    );
+  }
+  return yaml.load(readFileSync(SEARCH_CONFIG_FILE, "utf-8")) as Record<string, unknown>;
+}
+
+const SEARCH_BODY = loadSearchBody();
 
 export async function fetchAupairs(): Promise<object[]> {
   const token = await getToken();

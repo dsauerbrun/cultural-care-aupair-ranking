@@ -8,12 +8,13 @@ If you found this tool useful and want to buy me a coffee! [![Buy Me A Coffee](h
 
 - [How it works](#how-it-works)
 - [Setup](#setup)
+- [Setup your Search filters](#setup-your-filters-searchyaml)
 - [Setup your own criteria](#setup-your-own-criteria-criteriayaml)
-- [Usage](#usage)
   - [Generating with an LLM (recommended)](#generating-a-criteriayaml-with-an-llm-recommended)
   - [Criterion types](#criterion-types)
   - [Signal types](#signal-types-for-profile_signals)
   - [Tips](#tips)
+- [Workflow](#workflow)
 - [Files](#files)
 - [Individual scripts](#individual-scripts)
 
@@ -117,6 +118,18 @@ To find it: log into the Cultural Care portal → open DevTools (F12) → go to 
 Used only for photo analysis (Claude vision). The narrative generation uses your Claude.ai Pro subscription instead, so API usage is minimal.
 
 To get one: go to console.anthropic.com → sign up or log in → API Keys → Create Key. Add a small credit balance ($2 is more than enough to analyze the full candidate list multiple times).
+
+---
+
+## Setup your Search filters (`search.yaml`)
+
+The candidate search is driven by `search.yaml`. Copy `search.example.yaml` to `search.yaml` and set your travel dates and any filters you want to apply. Only `earliestTravelDate` and `latestTravelDate` are required — omitting any other field means no filter is applied for that dimension.
+
+```bash
+cp search.example.yaml search.yaml
+```
+
+`search.example.yaml` contains every supported field with all valid values listed in comments.
 
 ---
 
@@ -319,6 +332,8 @@ open results/results-<timestamp>.md
 
 | File/Folder | Purpose |
 |---|---|
+| `search.yaml` | Your search filters (travel dates, countries, ages, etc.) |
+| `search.example.yaml` | Reference showing every supported search filter and valid values |
 | `criteria.yaml` | Your scoring criteria — edit this to change what matters |
 | `criteria.example.yaml` | Reference example showing all criterion types |
 | `profiles/<id>.json` | Cached candidate profiles — fetched once, reused forever |

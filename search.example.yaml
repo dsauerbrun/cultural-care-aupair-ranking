@@ -1,0 +1,168 @@
+# Cultural Care au pair search filters
+# Copy this file to search.yaml and adjust to your needs.
+# Only earliestTravelDate and latestTravelDate are required — all other fields are optional.
+# Omitting an optional field means no filter is applied for that dimension.
+
+# ─── Travel dates (required) ──────────────────────────────────────────────────
+earliestTravelDate: "2026-08-01"
+latestTravelDate: "2027-08-01"
+
+# ─── Age groups ───────────────────────────────────────────────────────────────
+# Valid values: "17 - 20", "21 - 23", "24+"
+ages:
+  - "21 - 23"
+  - "24+"
+
+# ─── Current location ─────────────────────────────────────────────────────────
+# Valid values: "In home country", "In the US"
+# currentLocation:
+#   - "In home country"
+#   - "In the US"
+
+# If "In the US" is included above, you can also filter by specific states:
+# currentLocationList:
+#   - "Colorado"
+#   - "California"
+
+# ─── Home country ─────────────────────────────────────────────────────────────
+# ISO 3166-1 alpha-2 country codes. Full list of supported values:
+# AR, AU, AT, BE, BR, CA, CL, CO, HR, CZ, DK, EE, EC, FI, FR, DE, GR, HU, IE,
+# IT, LV, LT, MX, NL, NZ, NO, PA, PL, PT, SK, SI, ZA, ES, SE, CH, TH, UY, GB
+homeCountry:
+  - AR   # Argentina
+  - AU   # Australia
+  - AT   # Austria
+  - BE   # Belgium
+  - BR   # Brazil
+  - CA   # Canada
+  - CL   # Chile
+  - CO   # Colombia
+  - HR   # Croatia
+  - CZ   # Czech Republic
+  - DK   # Denmark
+  - EE   # Estonia
+  - EC   # Ecuador
+  - FI   # Finland
+  - FR   # France
+  - DE   # Germany
+  - GR   # Greece
+  - HU   # Hungary
+  - IE   # Ireland
+  - IT   # Italy
+  - LV   # Latvia
+  - LT   # Lithuania
+  - MX   # Mexico
+  - NL   # Netherlands
+  - NZ   # New Zealand
+  - NO   # Norway
+  - PA   # Panama
+  - PL   # Poland
+  - PT   # Portugal
+  - SK   # Slovakia
+  - SI   # Slovenia
+  - ZA   # South Africa
+  - ES   # Spain
+  - SE   # Sweden
+  - CH   # Switzerland
+  - TH   # Thailand
+  - UY   # Uruguay
+  - GB   # United Kingdom
+
+# ─── Gender identity ──────────────────────────────────────────────────────────
+# Valid values: "Male", "Female", "Non-binary"
+genderIdentity:
+  - "Female"
+
+# ─── Languages spoken ─────────────────────────────────────────────────────────
+# Valid values: Afrikaans, American Sign Language, Arabic, Bosnian, Catalan,
+# Chinese, Croatian, Czech, Danish, Dutch, Estonian, Finnish, French, German,
+# Greek, Hebrew, Hindi, Hungarian, Italian, Japanese, Korean, Latvian,
+# Lithuanian, Norwegian, Persian, Polish, Portuguese, Romanian, Russian,
+# Serbian, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian,
+# Urdu, Vietnamese, Zulu
+# languages:
+#   - Spanish
+#   - French
+
+# ─── Sport interests ──────────────────────────────────────────────────────────
+# Valid values: American football, Badminton, Baseball, Basketball, Cheerleading,
+# Cricket, Cycling, Dancing, Field hockey, Fishing, Golf, Gymnastics, Handball,
+# Hiking, Horseback riding, Ice hockey, Lacrosse, Martial arts, Pickleball,
+# Rolling skating, Rugby, Running, Sailing, Skateboarding, Skiing, Soccer,
+# Softball, Squash, Swimming, Table tennis, Tennis, Volleyball, Water sports,
+# Wrestling
+# sportInterests:
+#   - Hiking
+#   - Skiing
+#   - Cycling
+
+# ─── Relaxing interests ───────────────────────────────────────────────────────
+# Valid values: Board games, Camping, Card games, Gaming, Gardening, Journaling,
+# Meditation, Movies, Puzzles, Reading, Television, Walking, Yoga
+# relaxingInterests:
+#   - Camping
+#   - Reading
+
+# ─── Creativity interests ─────────────────────────────────────────────────────
+# Valid values: Art, Baking, Concerts, Cooking, Crafts, Drawing, Graphic design,
+# Makeup, Musical instruments, Photography, Singing, Social media, Theater, Writing
+# creativityInterests:
+#   - Photography
+#   - Cooking
+
+# ─── Food preferences ─────────────────────────────────────────────────────────
+# Valid values: Gluten free, Halal, Kosher, Lactose free, No preference, Other,
+# Vegan, Vegetarian
+# foodPreferences:
+#   - "No preference"
+
+# ─── Religion ─────────────────────────────────────────────────────────────────
+# Valid values: Agnostic, Atheist, Buddhist, Catholic, Christian, Hindu, Jewish,
+# Muslim, Not religious, Other, Spiritual
+religion:
+  - Agnostic
+  - Atheist
+  - Buddhist
+  - Catholic
+  - Christian
+  - Hindu
+  - Jewish
+  - Muslim
+  - "Not religious"
+  - Other
+  - Spiritual
+
+# ─── Personality traits ───────────────────────────────────────────────────────
+# Valid values: Active, Adventurous, Assertive, Athletic, Calm, Cheerful,
+# Creative, Driven, Empathetic, Energetic, Family-oriented, Flexible, Funny,
+# Independent, Intellectual, Laid-back, Organized, Passionate, Perceptive,
+# Proactive, Trustworthy, Warm
+# personalityTraits:
+#   - Active
+#   - Adventurous
+
+# ─── Preferred ages to care for ───────────────────────────────────────────────
+# Valid values: "3 - 11 months", "12 - 23 months", "2 - 4 years", "5 - 9 years", "10+ years"
+# preferredAges:
+#   - "3 - 11 months"
+#   - "12 - 23 months"
+
+# ─── Driving ──────────────────────────────────────────────────────────────────
+# Valid values: "Daily", "Weekly", "Monthly", "Irregularly"
+# drivingFrequency:
+#   - Daily
+#   - Weekly
+
+# Years of driving experience
+# Valid values: "Less than 1 year", "1 - 3 years", "3 - 5 years", "5+ years"
+# yearsDriving:
+#   - "1 - 3 years"
+#   - "3 - 5 years"
+#   - "5+ years"
+
+# ─── Boolean filters ──────────────────────────────────────────────────────────
+# Set to true to require this, false or omit to not filter on it
+okToSuperviseSwimmingChildren: false
+livedAwayFromHome: false
+okToLiveSingleParent: false
+comfortableWithLGBTQFamily: false
