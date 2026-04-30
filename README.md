@@ -2,6 +2,8 @@
 
 Fetches, scores, and ranks Cultural Care au pair candidates. Generates a human-readable report so you can quickly identify the best matches.
 
+If you found this tool useful and want to buy me a coffee! [![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/dsauerbrun)
+
 ## Table of contents
 
 - [How it works](#how-it-works)
