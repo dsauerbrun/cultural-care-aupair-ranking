@@ -45,35 +45,35 @@ _Generated: 4/29/2026, 9:52:21 PM_
 | Infant care experience | 40% |
 | Outdoor/active lifestyle | 35% |
 | English level (threshold: 4) | 20% |
-| long nails | penalty |
+| Drinks alcohol | penalty |
 
 ---
 
 ## 🥇 Fake Name (BRA999999999)
 **Overall: 8.4/10**  ·  ⏳ This au pair is currently chatting with the maximum number of families.
 
-Top-ranked overall — strong infant care (1835h documented, prefers infants, bio mentions babies, 9/10 photo evidence), Level 5 English, and the active/adventurous trait set the family wants. No long nails. The most well-rounded candidate, but unfortunately currently unavailable as she's chatting with the maximum number of families.
+Top-ranked overall — strong infant care (1835h documented, prefers infants, bio mentions babies, 9/10 photo evidence), Level 5 English, and the active/adventurous trait set the family wants. Not a drinker. The most well-rounded candidate, but unfortunately currently unavailable as she's chatting with the maximum number of families.
 
 | Category | Score | Detail |
 |---|---|---|
 | Infant care | 9/10 | 1835h documented, photo score 9/10 |
 | Outdoor | 8/10 | Text: 9, Photos: 6 |
 | English | Level 5 | Proficient - Level 5 |
-| Long nails | — | Not detected ✓ |
+| Drinks alcohol | — | Not detected ✓ |
 
 ---
 
 ## 🥈 Fake name2 (COL9999999)
 **Overall: 8.0/10**  ·  ✅ Available
 
-Standout outdoor profile (8/10 across both text and photos) with a scuba diving photo showing full gear — genuine adventurous signal. Decent infant care (613h, 8/10 baby photos) and clean nails. Available right now, making her the highest-ranked candidate the family can actually action on; held back from #1 only because hours are lower and bio doesn't explicitly mention babies.
+Standout outdoor profile (8/10 across both text and photos) with a scuba diving photo showing full gear — genuine adventurous signal. Decent infant care (613h, 8/10 baby photos) and not a drinker. Available right now, making her the highest-ranked candidate the family can actually action on; held back from #1 only because hours are lower and bio doesn't explicitly mention babies.
 
 | Category | Score | Detail |
 |---|---|---|
 | Infant care | 9/10 | 613h documented, photo score 8/10 |
 | Outdoor | 8/10 | Text: 8, Photos: 8 |
 | English | Level 4 | Intermediate - Level 4 |
-| long nails | — | Not detected ✓ |
+| Drinks alcohol | — | Not detected ✓ |
 
 ---
 
