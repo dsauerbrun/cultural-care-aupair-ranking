@@ -14,7 +14,8 @@ If you found this tool useful and want to buy me a coffee! [![Buy Me A Coffee](h
   - [Criterion types](#criterion-types)
   - [Signal types](#signal-types-for-profile_signals)
   - [Tips](#tips)
-- [Workflow](#workflow)
+- [Usage](#usage)
+- [How to skip aupairs](#how-to-skip-aupairs)
 - [Files](#files)
 - [Individual scripts](#individual-scripts)
 
@@ -328,6 +329,14 @@ Generates `results/results-<timestamp>.md` — open it in any markdown viewer.
 ```bash
 open results/results-<timestamp>.md
 ```
+
+---
+
+## How to skip aupairs
+
+This tool doesn't know if you have already chatted with an aupair or aren't interested in one. You'll need to update `ignore-list.yaml` with the au pair numbers you aren't interested in chatting with. This will put them at the bottom of the list
+
+To find an aupair's aupair number, go to their profile and look for the `Au pair ID #` that is listed.
 
 ---
 
