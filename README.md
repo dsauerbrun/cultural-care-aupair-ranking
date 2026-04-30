@@ -85,20 +85,26 @@ Standout outdoor profile (8/10 across both text and photos) with a scuba diving 
 bun install
 ```
 
-Create a `.env` file with:
+Copy `.env.example` to `.env` and fill in each value:
 
-```
-CULTURAL_CARE_EMAIL=your@email.com
-CULTURAL_CARE_PASSWORD=yourpassword
-CULTURAL_CARE_HF_ID=<your host family UUID>
-ANTHROPIC_API_KEY=<your Anthropic API key>
+```bash
+cp .env.example .env
 ```
 
-**`CULTURAL_CARE_HF_ID`:** Open DevTools on the Cultural Care portal → Network tab → find any GraphQL request that includes `hfId` in the payload → copy that UUID. It never changes.
+### Environment variables
 
-**`ANTHROPIC_API_KEY`:** Used only for photo analysis. Create an account at console.anthropic.com and add credits — ~$5 covers the full candidate list many times over.
+**`CULTURAL_CARE_EMAIL` and `CULTURAL_CARE_PASSWORD`**
+Your Cultural Care host family portal login credentials. The tool uses these to automatically fetch and refresh the auth token — you never need to copy tokens manually.
 
-The Cognito auth token is fetched and refreshed automatically using your email and password. You never need to copy tokens manually.
+**`CULTURAL_CARE_HF_ID`**
+Your host family's UUID, used when adding au pairs to your favorites list.
+
+To find it: log into the Cultural Care portal → open DevTools (F12) → go to the Network tab → click any GraphQL request → look in the request payload for a field called `hfId` → copy that UUID. It never changes.
+
+**`ANTHROPIC_API_KEY`**
+Used only for photo analysis (Claude vision). The narrative generation uses your Claude.ai Pro subscription instead, so API usage is minimal.
+
+To get one: go to console.anthropic.com → sign up or log in → API Keys → Create Key. Add a small credit balance ($2 is more than enough to analyze the full candidate list multiple times).
 
 ---
 
@@ -119,14 +125,16 @@ This will:
 - Save ranked results to `results/results-<timestamp>.json`
 - Save a narrative prompt to `narratives/narratives-prompt-<timestamp>.txt`
 
-### Step 2 — Generate narratives (free, uses Claude.ai)
+You can stop here. The raw ranked scores are in `results/results-<timestamp>.json`, and the narrative prompt at `narratives/narratives-prompt-<timestamp>.txt` is human-readable on its own if you want a quick look without generating the full report.
+
+### Step 2 — Generate narratives _(optional — requires Claude.ai or similar)_
 
 1. Open `narratives/narratives-prompt-<timestamp>.txt`
 2. Paste the entire contents into [claude.ai](https://claude.ai) (uses your Pro subscription — no API credits)
 3. Claude responds with a JSON object mapping each candidate's ID to a narrative explanation
 4. Save that response as `narratives/narratives-<timestamp>.json`
 
-### Step 3 — Build the markdown report
+### Step 3 — Build the markdown report _(optional — requires Step 2)_
 
 ```bash
 bun build-report.ts results/results-<timestamp>.json narratives/narratives-<timestamp>.json
@@ -140,10 +148,167 @@ open results/results-<timestamp>.md
 
 ---
 
+## Defining your own criteria (`criteria.yaml`)
+
+All scoring is driven by `criteria.yaml`. Copy `criteria.example.yaml` to `criteria.yaml` and edit it to match what you care about. No code changes needed.
+
+### Generating a `criteria.yaml` with an LLM (recommended)
+
+Writing YAML by hand can be fiddly. The easiest approach is to let Claude (or any LLM) generate it for you:
+
+1. Open `criteria.example.yaml` and copy its full contents
+2. Go to [claude.ai](https://claude.ai) and paste a message like this:
+
+> I want to score au pair candidates using the following YAML format. Here is an example file that shows all the supported criterion types and signal types:
+>
+> ```yaml
+> [paste the full contents of criteria.example.yaml here]
+> ```
+>
+> Please generate a `criteria.yaml` file for my situation:
+> [describe what you care about in plain English, e.g. "I have a dog so I want candidates who love animals. I also want someone who is creative and artistic. I'd prefer someone who doesn't smoke — flag it if there's evidence of smoking in photos."]
+
+3. Copy the generated YAML into `criteria.yaml`
+4. Run `bun score-profile.ts <any-au-pair-id>` to test it on a single candidate before doing a full run
+5. Tweak and re-test until the scores feel right
+
+The example file is designed to cover all the supported patterns, so the LLM will have everything it needs to generate valid criteria for almost any preference you can describe.
+
+Each criterion is one entry in the `criteria` list with a `type` of `score`, `threshold`, or `penalty`.
+
+---
+
+### Criterion types
+
+#### `score` — contributes positively to the composite score
+
+```yaml
+- id: outdoor_fit           # unique key used internally
+  label: "Outdoor Lifestyle" # shown in the report
+  weight: 0.35              # contribution to composite (scores 0-10 × weight)
+  type: score
+  photo_weight: 0.5         # how much photo evidence vs profile text contributes (0-1)
+
+  photo:                    # optional — omit if you don't want photo analysis for this criterion
+    description: |
+      What to look for in photos. Written as instructions to Claude vision.
+      Include score tiers (HIGH/MEDIUM/LOW/NONE) and what each looks like.
+      End with: Return: { "score": <0-10 integer>, "evidence": ["observations"] }
+
+  profile_signals:          # optional — omit if photos are the only signal
+    raw_max: 18             # max possible raw points before normalizing to 0-10
+    items:
+      - ...                 # one or more signals (see Signal types below)
+```
+
+#### `threshold` — pass/fail check that contributes to the score and flags failures
+
+```yaml
+- id: english_level
+  label: "English Level"
+  weight: 0.20
+  type: threshold
+
+  threshold:
+    field: "interview.englishProficiencyLevel"  # dotted path into the profile JSON
+    parse_regex: "level\\s*(\\d)"               # regex to extract a number from the field value
+    minimum: 4                                  # value must be >= this to pass
+    score_multiplier: 2                         # score = parsed_value × multiplier
+    max_score: 10
+
+  flag_below_threshold: "English Level {value} — below required Level 4"
+  # {value} is replaced with the parsed number
+```
+
+#### `penalty` — subtracts from the composite score if triggered by photo evidence
+
+```yaml
+- id: alcohol
+  label: "Alcohol in Photos"
+  weight: -1                # amount subtracted from composite if triggered
+  type: penalty
+
+  photo:
+    description: |
+      What to look for. End with:
+      Return: { "detected": <true/false>, "confidence": <"high"|"medium"|"low">, "note": "<one sentence>" }
+
+  trigger: "detected and confidence != low"   # when to apply the penalty
+  flag_message: "Alcohol detected ({confidence} confidence)"
+  # {confidence} is replaced with the actual confidence value
+```
+
+---
+
+### Signal types (for `profile_signals`)
+
+**`array_match`** — award points for matching items in an array field
+
+```yaml
+- type: array_match
+  field: personalityTraits        # or use `fields: [field1, field2]` to check multiple
+  values: [Active, Adventurous]   # case-insensitive substring match against each item
+  points_each: 2                  # points per matched item
+  max: 8                          # cap on total points from this signal
+```
+
+**`bio_keywords`** — award points for keywords found anywhere in bio text fields
+
+```yaml
+- type: bio_keywords
+  fields: [aboutSelfAndInterests, WhyBecomeAuPair]  # string fields to search
+  keywords: [outdoor, hiking, mountain]              # substring matches (case-insensitive)
+  points_each: 1                                     # points per unique keyword found
+  max: 4
+```
+
+**`array_sum`** — award points based on a numeric value summed across an array of objects
+
+```yaml
+- type: array_sum
+  field: childcareExperiences    # array of objects in the profile
+  subfield: infantCareHours      # numeric field on each object to sum
+  full_credit_at: 500            # max points awarded when sum reaches this value
+  max: 4                         # max points from this signal
+```
+
+**`array_keyword_any`** — binary: award max points if any item in an array contains a keyword
+
+```yaml
+- type: array_keyword_any
+  field: preferredAgeGroupToCareFor   # array field (strings or objects)
+  subfield: agesOfChildren            # optional — if field is array of objects, which subfield to check
+  keywords: [infant, baby, months]    # any match awards max points
+  max: 2
+```
+
+**`bio_keyword_any`** — binary: award max points if any bio field contains any keyword
+
+```yaml
+- type: bio_keyword_any
+  fields: [aboutChildcareExperience, WhyBecomeAuPair]
+  keywords: [infant, baby, newborn]   # any match in any field awards max points
+  max: 1
+```
+
+---
+
+### Tips
+
+- **Weights don't need to sum to 1.** The composite score is `sum(criterion_score × weight)` where scores are 0-10. Typical weights (0.35, 0.40, 0.20) naturally produce composites in the 0-10 range.
+- **`photo_weight`** controls how much photo evidence contributes vs profile text. `0.5` means 50/50. Set to `0` to ignore photos for a criterion; omit the `photo` section entirely to skip photo analysis.
+- **`raw_max`** is the denominator for normalizing profile signals to 0-10. Set it to the maximum raw points any candidate could realistically earn across all signals.
+- **Clear the photo cache** (`photo-analysis/`) when you add or remove criteria that have a `photo` section — cached results won't include the new dimensions.
+- **Test a single candidate** before a full run: `bun score-profile.ts <au-pair-id>`
+
+---
+
 ## Files
 
 | File/Folder | Purpose |
 |---|---|
+| `criteria.yaml` | Your scoring criteria — edit this to change what matters |
+| `criteria.example.yaml` | Reference example showing all criterion types |
 | `profiles/<id>.json` | Cached candidate profiles — fetched once, reused forever |
 | `photo-analysis/<id>.json` | Cached photo analysis results |
 | `matched-aupairs.json` | Cached list of candidates who have already been matched — skipped in future availability checks |

@@ -2,15 +2,22 @@ import { fetchProfile } from "./fetch-profile.ts";
 import { fetchAupairs, saveAndCompare, checkProfilesAvailable } from "./fetch-aupairs.ts";
 import { addToFavorites } from "./add-to-favorites.ts";
 import { analyzePhotos, type PhotoAnalysisResult } from "./analyze-photos.ts";
-import { scoreProfile, type ProfileScores } from "./score-profile.ts";
+import { scoreProfile } from "./score-profile.ts";
+import type { CriterionResult } from "./criteria-engine.ts";
+import { loadCriteria } from "./criteria-engine.ts";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PHOTO_CACHE_DIR = join(__dirname, "photo-analysis");
-const RESULTS_DIR = join(__dirname, "results");
+const PROFILES_DIR  = join(__dirname, "profiles");
+const RESULTS_DIR   = join(__dirname, "results");
 const NARRATIVES_DIR = join(__dirname, "narratives");
+
+const criteria = loadCriteria();
+
+// ─── Candidate List ───────────────────────────────────────────────────────────
 
 console.log("Fetching current au pair list...");
 const allCandidates = await fetchAupairs() as Array<{
@@ -24,24 +31,15 @@ saveAndCompare(allCandidates);
 
 const liveIds = new Set(allCandidates.map(c => c.id));
 
-// Merge in any cached profiles that didn't appear in this search response
-const PROFILES_DIR = join(__dirname, "profiles");
 const cachedOnly = readdirSync(PROFILES_DIR)
   .filter(f => f.endsWith(".json"))
   .map(f => f.replace(".json", ""))
   .filter(id => !liveIds.has(id))
   .map(id => {
     const p = JSON.parse(readFileSync(join(PROFILES_DIR, `${id}.json`), "utf-8")) as {
-      id?: string;
-      auPairNumber?: string;
-      firstName?: string;
-      nickName?: string;
+      auPairNumber?: string; firstName?: string; nickName?: string;
     };
-    return {
-      id,
-      auPairNumber: p.auPairNumber ?? id,
-      name: p.nickName ?? p.firstName ?? p.auPairNumber ?? id,
-    };
+    return { id, auPairNumber: p.auPairNumber ?? id, name: p.nickName ?? p.firstName ?? p.auPairNumber ?? id };
   });
 
 if (cachedOnly.length > 0) {
@@ -49,13 +47,11 @@ if (cachedOnly.length > 0) {
 }
 
 const SHORTLIST = [
-  ...allCandidates.map(c => ({
-    id: c.id,
-    name: c.auPairName ?? c.firstName ?? c.auPairNumber,
-    auPairNumber: c.auPairNumber,
-  })),
+  ...allCandidates.map(c => ({ id: c.id, name: c.auPairName ?? c.firstName ?? c.auPairNumber, auPairNumber: c.auPairNumber })),
   ...cachedOnly,
 ];
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type RankedResult = {
   rank: number;
@@ -63,55 +59,66 @@ type RankedResult = {
   name: string;
   auPairNumber: string;
   composite: number;
-  scores: ProfileScores;
+  criterionResults: CriterionResult[];
+  flags: string[];
   profileViewable?: boolean;
   availabilityReason?: string;
 };
 
-function compositeScore(s: ProfileScores): number {
-  return (
-    s.infantCare.score   * 0.40 +
-    s.outdoor.score      * 0.35 +
-    s.englishLevel.score * 0.20 +
-    s.acrylicNails.penalty
-  );
-}
+// ─── Narrative Prompt ─────────────────────────────────────────────────────────
 
 function buildNarrativesPrompt(results: RankedResult[]): string {
-  const candidateData = results.map((r) => {
-    const s = r.scores;
-    const ic = s.infantCare;
-    const od = s.outdoor;
-    const viewability = r.profileViewable === true ? "✓ Available"
-      : r.profileViewable === false ? `✗ Unavailable — ${r.availabilityReason ?? "unknown reason"}`
-      : "Not checked";
-    return `RANK #${r.rank}: ${r.name} (${r.auPairNumber}) — composite ${r.composite.toFixed(1)}/10
-Availability: ${viewability}
-Infant care (${ic.score}/10): hours=${ic.breakdown.hoursWithInfants}, prefersInfants=${ic.breakdown.prefersInfantAges}, bioMentions=${ic.breakdown.bioMentionsInfants}, photoScore=${ic.breakdown.photoScore}/10. Notes: ${ic.notes.slice(0, 2).join("; ")}
-Outdoor (${od.score}/10, text:${od.textScore}, photos:${od.photoScore}): ${[...od.textEvidence.slice(0, 1), ...od.photoEvidence.slice(0, 1)].join("; ") || "no signals"}
-English: Level ${s.englishLevel.level} (${s.englishLevel.raw})
-Acrylic nails: detected=${s.acrylicNails.detected} (${s.acrylicNails.confidence}). ${s.acrylicNails.note}
-Flags: ${s.flags.join("; ") || "none"}`;
+  const criteriaDesc = criteria
+    .map(c => {
+      if (c.type === "penalty") return `- ${c.label} (penalty if detected)`;
+      return `- ${c.label} (${(c.weight * 100).toFixed(0)}% of score)`;
+    })
+    .join("\n");
+
+  const candidateData = results.map(r => {
+    const lines: string[] = [
+      `RANK #${r.rank}: ${r.name} (${r.auPairNumber}) — composite ${r.composite.toFixed(1)}/10`,
+    ];
+
+    if (r.profileViewable !== undefined) {
+      const avail = r.profileViewable ? "✓ Available"
+        : `✗ Unavailable — ${r.availabilityReason ?? "unknown reason"}`;
+      lines.push(`Availability: ${avail}`);
+    }
+
+    for (const cr of r.criterionResults) {
+      if (cr.type === "score") {
+        const detail = [
+          cr.profileScore != null ? `text: ${cr.profileScore}` : null,
+          cr.photoScore != null ? `photos: ${cr.photoScore}` : null,
+        ].filter(Boolean).join(", ");
+        const notes = cr.notes.slice(0, 2).join("; ") || "no signals";
+        lines.push(`${cr.label} (${cr.score}/10${detail ? ` — ${detail}` : ""}): ${notes}`);
+      } else if (cr.type === "threshold") {
+        lines.push(`${cr.label}: ${cr.raw} (Level ${cr.level}) — ${cr.meetsThreshold ? "meets threshold" : "BELOW threshold"}`);
+      } else if (cr.type === "penalty") {
+        lines.push(`${cr.label}: detected=${cr.detected} (${cr.confidence}). ${cr.penaltyNote ?? ""}`);
+      }
+    }
+
+    if (r.flags.length > 0) lines.push(`Flags: ${r.flags.join("; ")}`);
+    return lines.join("\n");
   }).join("\n\n---\n\n");
 
-  return `You are helping a family in Boulder, Colorado evaluate au pair candidates. They have a 6-month-old baby.
+  return `You are helping evaluate au pair candidates. Scoring criteria:
+${criteriaDesc}
 
-Their priorities (in order):
-1. Infant care (40%) — documented hours with babies, preference for infant ages, bio mentions, photo evidence of baby interaction
-2. Outdoor/active lifestyle (35%) — fit for Boulder: hiking, cycling, skiing, climbing culture. Scored from both profile text (sports listed, personality traits) and photos
-3. English Level 4+ (20%)
-4. No acrylic nails (penalty if detected) — hygiene concern with infant care
+For each candidate, write 2-3 sentences explaining their ranking. Be specific — reference actual signals: photos, documented hours, bio mentions, specific findings. Top candidates: highlight strengths. Bottom candidates: explain what they missed.
 
-For each candidate below, write 2-3 sentences explaining why they are ranked where they are. Be specific — reference actual signals from their data: outdoor photos (hiking trails, gym, climbing), infant care hours, baby photos, acrylic nail findings. Top candidates: highlight what makes them stand out. Bottom candidates: clearly explain which criteria they fell short on.
-
-Return ONLY a valid JSON object mapping auPairNumber to explanation string, no other text, no markdown fences:
-{"COL2279373": "explanation...", "BRA2306700": "explanation...", ...}
+Return ONLY a valid JSON object mapping auPairNumber to explanation, no markdown fences:
+{"COL2279373": "explanation...", ...}
 
 CANDIDATES:
 ${candidateData}`;
 }
 
-// --- Main ---
+// ─── Scoring Loop ─────────────────────────────────────────────────────────────
+
 const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
 if (!hasAnthropicKey) {
   console.warn("No ANTHROPIC_API_KEY — photo analysis will be skipped for uncached candidates.\n");
@@ -124,21 +131,7 @@ const results: RankedResult[] = [];
 for (const candidate of SHORTLIST) {
   process.stdout.write(`  ${candidate.name} (${candidate.auPairNumber})... `);
 
-  const profile = await fetchProfile(candidate.id) as {
-    mediaFiles?: Array<{ file: { cfnUrl?: string } }>;
-    profilePicture?: { cfnUrl?: string };
-    interview?: { englishProficiencyLevel?: string };
-    childcareExperiences?: unknown[];
-    preferredAgeGroupToCareFor?: string[];
-    aboutChildcareExperience?: string;
-    aboutSelfAndInterests?: string;
-    WhyBecomeAuPair?: string;
-    otherInterests?: string;
-    sports?: string[];
-    personalityTraits?: string[];
-    social?: string[];
-    relaxing?: string[];
-  };
+  const profile = await fetchProfile(candidate.id) as Record<string, unknown>;
 
   const cachePath = join(PHOTO_CACHE_DIR, `${candidate.id}.json`);
   let photoAnalysis: PhotoAnalysisResult | null = null;
@@ -146,23 +139,25 @@ for (const candidate of SHORTLIST) {
     photoAnalysis = JSON.parse(readFileSync(cachePath, "utf-8"));
     process.stdout.write("(photo cache hit) ");
   } else if (hasAnthropicKey) {
-    photoAnalysis = await analyzePhotos(profile.mediaFiles ?? [], profile.profilePicture, candidate.id);
+    const p = profile as { mediaFiles?: Array<{ file: { cfnUrl?: string } }>; profilePicture?: { cfnUrl?: string } };
+    photoAnalysis = await analyzePhotos(p.mediaFiles ?? [], p.profilePicture, candidate.id);
     process.stdout.write("(photos analyzed) ");
   } else {
     process.stdout.write("(no photo analysis) ");
   }
 
-  const scores = scoreProfile(profile, photoAnalysis);
-  const composite = compositeScore(scores);
-  results.push({ rank: 0, ...candidate, scores, composite });
+  const { criterionResults, flags, composite } = scoreProfile(profile, photoAnalysis);
+  results.push({ rank: 0, ...candidate, criterionResults, flags, composite });
   console.log(`composite: ${composite.toFixed(2)}`);
 }
+
+// ─── Sort & Rank ──────────────────────────────────────────────────────────────
 
 results.sort((a, b) => b.composite - a.composite);
 results.forEach((r, i) => { r.rank = i + 1; });
 
-// Check availability in batches until we have 10 non-matched candidates.
-// Matched ones get their score zeroed so they sink to the bottom on re-sort.
+// ─── Availability Checking ────────────────────────────────────────────────────
+
 const FOUND_MATCH_REASON = "This au pair has already found their match.";
 const AVAILABILITY_BATCH = 10;
 let nonMatchedFound = 0;
@@ -204,25 +199,30 @@ while (nonMatchedFound < 10 && checkedUpTo < results.length) {
 
 console.log(`\nFound ${nonMatchedFound} non-matched candidate(s) after checking ${checkedUpTo}.`);
 
-// Re-sort: matched ones (score=0) sink to the bottom
 results.sort((a, b) => b.composite - a.composite);
-results.forEach((r, i) => { r.rank = i + 1; })
+results.forEach((r, i) => { r.rank = i + 1; });
 
-// Save JSON results
+// ─── Save Outputs ─────────────────────────────────────────────────────────────
+
 const timestamp = new Date().toISOString();
 const slug = timestamp.replace(/[:.]/g, "-").slice(0, 19);
 mkdirSync(RESULTS_DIR, { recursive: true });
 mkdirSync(NARRATIVES_DIR, { recursive: true });
-const jsonPath = join(RESULTS_DIR, `results-${slug}.json`);
-writeFileSync(jsonPath, JSON.stringify({ generatedAt: timestamp, candidates: results }, null, 2));
-console.log(`\nSaved results to results/${slug}.json`);
 
-// Write the narratives prompt for Claude.ai
+writeFileSync(
+  join(RESULTS_DIR, `results-${slug}.json`),
+  JSON.stringify({ generatedAt: timestamp, candidates: results }, null, 2)
+);
+console.log(`\nSaved results to results/results-${slug}.json`);
+
 const promptPath = join(NARRATIVES_DIR, `narratives-prompt-${slug}.txt`);
 writeFileSync(promptPath, buildNarrativesPrompt(results));
 console.log(`Saved prompt to narratives/narratives-prompt-${slug}.txt`);
 console.log(`
-Next steps:
-  1. Open narratives/narratives-prompt-${slug}.txt and paste its contents into claude.ai
+The ranked results are in results/results-${slug}.json.
+narratives/narratives-prompt-${slug}.txt is already human-readable — open it directly for a quick summary of every candidate without any extra steps.
+
+To generate a full markdown report (optional — requires a Claude.ai or similar subscription):
+  1. Paste narratives/narratives-prompt-${slug}.txt into claude.ai
   2. Save Claude's JSON response as narratives/narratives-${slug}.json
   3. Run: bun build-report.ts results/results-${slug}.json narratives/narratives-${slug}.json`);
