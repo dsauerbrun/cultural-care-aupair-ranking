@@ -93,8 +93,11 @@ Results are saved as a timestamped JSON file. A narrative prompt is also generat
 > | Drinks alcohol | — | Not detected ✓ |
 
 ## Setup
+You'll need to [install](https://bun.com/docs/installation) bun
 
 ```bash
+git clone https://github.com/dsauerbrun/cultural-care-aupair-ranking.git
+cd cultural-care-aupair-ranking/
 bun install
 ```
 
