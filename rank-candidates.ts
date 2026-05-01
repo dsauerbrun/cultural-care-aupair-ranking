@@ -177,44 +177,75 @@ results.forEach((r, i) => { r.rank = i + 1; });
 
 const FOUND_MATCH_REASON = "This au pair has already found their match.";
 const AVAILABILITY_BATCH = 10;
-let nonMatchedFound = 0;
-let checkedUpTo = 0;
+const favoriteTopN = process.argv.includes("--favorite-top")
+  ? parseInt(process.argv[process.argv.indexOf("--favorite-top") + 1] ?? "20", 10)
+  : null;
 
-console.log("\nChecking availability (until 10 non-matched found)...");
+if (favoriteTopN !== null) {
+  // --favorite-top mode: add top N to favorites regardless of availability, skip only matched
+  console.log(`\n--favorite-top ${favoriteTopN}: checking and favoriting top ${favoriteTopN} candidates...`);
+  const top = results.slice(0, favoriteTopN);
+  const availability = await checkProfilesAvailable(top.map(r => r.id));
 
-while (nonMatchedFound < 10 && checkedUpTo < results.length) {
-  const batch = results.slice(checkedUpTo, checkedUpTo + AVAILABILITY_BATCH);
-  checkedUpTo += batch.length;
-
-  const availability = await checkProfilesAvailable(batch.map(r => r.id));
-
-  for (const r of batch) {
+  for (const r of top) {
     const av = availability[r.id];
     r.profileViewable = av?.available ?? false;
     r.availabilityReason = av?.reason;
 
     if (av?.reason === FOUND_MATCH_REASON) {
       r.composite = 0;
-      console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): 💍 Found their match — score zeroed`);
+      console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): 💍 Found their match — skipping favorites`);
     } else {
-      nonMatchedFound++;
-      if (av?.available) {
-        console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✓ available`);
+      console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ${av?.available ? "✓ available" : `✗ ${av?.reason ?? "unavailable"}`} — adding to favorites`);
+      try {
+        await addToFavorites(r.id);
+        console.log(`    → added to favorites`);
+      } catch (e) {
+        console.warn(`    → failed to favorite: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+  }
+} else {
+  // Default mode: check until 10 non-matched found, favorite only unavailable ones
+  let nonMatchedFound = 0;
+  let checkedUpTo = 0;
+
+  console.log("\nChecking availability (until 10 non-matched found)...");
+
+  while (nonMatchedFound < 10 && checkedUpTo < results.length) {
+    const batch = results.slice(checkedUpTo, checkedUpTo + AVAILABILITY_BATCH);
+    checkedUpTo += batch.length;
+
+    const availability = await checkProfilesAvailable(batch.map(r => r.id));
+
+    for (const r of batch) {
+      const av = availability[r.id];
+      r.profileViewable = av?.available ?? false;
+      r.availabilityReason = av?.reason;
+
+      if (av?.reason === FOUND_MATCH_REASON) {
+        r.composite = 0;
+        console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): 💍 Found their match — score zeroed`);
       } else {
-        const reason = av?.reason ?? "unavailable";
-        console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✗ ${reason} — adding to favorites`);
-        try {
-          await addToFavorites(r.id);
-          console.log(`    → added to favorites`);
-        } catch (e) {
-          console.warn(`    → failed to favorite: ${e instanceof Error ? e.message : e}`);
+        nonMatchedFound++;
+        if (av?.available) {
+          console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✓ available`);
+        } else {
+          const reason = av?.reason ?? "unavailable";
+          console.log(`  #${r.rank} ${r.name} (${r.auPairNumber}): ✗ ${reason} — adding to favorites`);
+          try {
+            await addToFavorites(r.id);
+            console.log(`    → added to favorites`);
+          } catch (e) {
+            console.warn(`    → failed to favorite: ${e instanceof Error ? e.message : e}`);
+          }
         }
       }
     }
   }
-}
 
-console.log(`\nFound ${nonMatchedFound} non-matched candidate(s) after checking ${checkedUpTo}.`);
+  console.log(`\nFound ${nonMatchedFound} non-matched candidate(s) after checking ${checkedUpTo}.`);
+}
 
 results.sort((a, b) => b.composite - a.composite);
 results.forEach((r, i) => { r.rank = i + 1; });

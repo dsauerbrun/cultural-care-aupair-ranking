@@ -311,6 +311,12 @@ This will:
 
 You can stop here. The raw ranked scores are in `results/results-<timestamp>.json`, and the narrative prompt at `narratives/narratives-prompt-<timestamp>.txt` is human-readable on its own if you want a quick look without generating the full report.
 
+**`--favorite-top N` flag** — add the top N candidates to your favorites list regardless of their availability status (only skipping those who have already been matched). Useful when you want to bulk-open profiles before a session of reviewing candidates.
+
+```bash
+bun rank-candidates.ts --favorite-top 20
+```
+
 ### Step 2 — Generate narratives _(optional — requires Claude.ai or similar)_
 
 1. Open `narratives/narratives-prompt-<timestamp>.txt`
